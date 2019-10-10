@@ -1,0 +1,70 @@
+# Prepare things only necessary in Ubuntu Docker-in-Docker scenario
+- name: Prepare
+  hosts: localhost
+  tasks:
+  - name: Install python and python-pip packages
+    apt:
+      pkg:
+        - python
+        - python-pip
+      state: latest
+      update_cache: true
+    become: true
+
+  - name: Add docker repo key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      id: 0EBFCD88
+      validate_certs: no
+
+  - name: Add docker repo
+    apt_repository:
+      repo: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release | lower }} stable'
+      state: present
+      update_cache: yes
+      validate_certs: no
+
+  - name: Install docker
+    apt:
+      pkg: docker-ce
+      state: present
+
+  - name: Install Python Docker module for Ansible
+    pip:
+      name: docker
+      state: present
+
+  - name: Install docker-compose
+    pip:
+      name: docker-compose
+      state: present
+
+  - name: create /etc/docker
+    file:
+      state: directory
+      path: /etc/docker
+
+  - name: set storage-driver to vfs via daemon.json
+    copy:
+      content: |
+        {
+          "storage-driver": "vfs"
+        }
+      dest: /etc/docker/daemon.json
+
+  - name: create systemd unitfile
+    copy:
+      content: |
+        [Unit]
+        Description=dind
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock > dockerd.log 2>&1
+
+        [Install]
+        WantedBy=default.target
+
+      dest: "/etc/systemd/system/dind.service"
+      mode: "0640"

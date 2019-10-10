@@ -1,0 +1,15 @@
+- name: Build Ubuntu docker image for docker in docker to speedup molecule
+  gather_facts: False
+  hosts:
+    - localhost
+  vars:
+    docker_datetime: "{{ lookup('pipe','date +%Y-%m-%d-%H-%M-%S') }}"
+  tasks:
+  - name: Build an image and push it to a repo
+    docker_image:
+      build:
+        path: ./ubuntu-1804-dind-molecule
+      name: mwillemsma/ubuntu-1804-dind-molecule
+      tag: "{{ docker_datetime }}"
+      push: no
+      source: build
